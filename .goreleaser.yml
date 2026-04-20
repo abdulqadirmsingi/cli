@@ -17,19 +17,19 @@ builds:
       - -X github.com/devpulse-cli/devpulse/internal/config.AppVersion={{.Version}}
 
 archives:
-  - format: tar.gz
+  - name_template: "pulse_{{ .Os }}_{{ .Arch }}"
+    formats: [tar.gz]
     format_overrides:
       - goos: windows
-        format: zip
-    name_template: "pulse_{{ .Os }}_{{ .Arch }}"
+        formats: [zip]
 
 checksum:
   name_template: "checksums.txt"
 
 release:
   github:
-    owner: devpulse-cli
-    name: devpulse
+    owner: abdulqadirmsingi
+    name: pulse-cli
   name_template: "v{{.Version}}"
 
 changelog:
