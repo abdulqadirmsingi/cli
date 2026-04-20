@@ -72,7 +72,7 @@ func runInit(_ *cobra.Command, _ []string) error {
 	fmt.Println()
 	cyan := lipgloss.NewStyle().Foreground(lipgloss.Color("#00D4FF"))
 	fmt.Println(ui.Box.Render(
-		ui.Success.Render("ur Pulse is ready to slay 🔥")+"\n\n"+
+		ui.Success.Render("Your Pulse is ready to slay 🔥")+"\n\n"+
 			ui.Muted.Render("activate by running:")+"\n"+
 			cyan.Render("  source "+hookFile)+"\n\n"+
 			ui.Muted.Render("then try:")+"\n"+
