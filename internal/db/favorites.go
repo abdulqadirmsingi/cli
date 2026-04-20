@@ -1,6 +1,12 @@
 package db
 
-import "time"
+import (
+	"errors"
+	"time"
+)
+
+// ErrAlreadySaved is returned by AddFavorite when the command is already in favorites.
+var ErrAlreadySaved = errors.New("already saved")
 
 type FavoriteRow struct {
 	ID        int64
@@ -9,7 +15,14 @@ type FavoriteRow struct {
 	CreatedAt time.Time
 }
 
+// AddFavorite saves a command as a favourite. Returns ErrAlreadySaved (with the
+// existing row's ID as the first return value) if the command is already saved.
 func (db *DB) AddFavorite(command, alias string) (int64, error) {
+	var existing int64
+	err := db.conn.QueryRow(`SELECT id FROM favorites WHERE command = ?`, command).Scan(&existing)
+	if err == nil {
+		return existing, ErrAlreadySaved
+	}
 	res, err := db.conn.Exec(
 		`INSERT INTO favorites (command, alias) VALUES (?, ?)`,
 		command, alias,

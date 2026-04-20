@@ -115,6 +115,29 @@ func shellHook(shell, binaryPath string) (hookFile, content string) {
 	home, _ := os.UserHomeDir()
 
 	switch shell {
+	case "fish":
+		fishDir := filepath.Join(home, ".config", "fish")
+		// ensure fish config dir exists
+		_ = os.MkdirAll(fishDir, 0755)
+		content = fmt.Sprintf(`
+# ── Pulse shell hook ────────────────────────────────────
+function _pulse_log --on-event fish_postexec
+    set -l _exit $status
+    set -l _cmd $argv[1]
+    test -z "$_cmd"; and return
+    switch "$_cmd"
+        case 'pulse' 'pulse *'
+            return
+        case 'git *'
+            %s log --cmd "$_cmd" --exit "$_exit" --ms "$CMD_DURATION" --dir "$PWD" 2>&1
+        case '*'
+            %s log --cmd "$_cmd" --exit "$_exit" --ms "$CMD_DURATION" --dir "$PWD" >/dev/null 2>&1 &
+    end
+end
+# ────────────────────────────────────────────────────────
+`, binaryPath, binaryPath)
+		return filepath.Join(fishDir, "config.fish"), content
+
 	case "zsh":
 		content = fmt.Sprintf(`
 # ── Pulse shell hook ────────────────────────────────────
