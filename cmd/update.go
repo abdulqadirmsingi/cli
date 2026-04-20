@@ -52,7 +52,7 @@ func runUpdate(_ *cobra.Command, _ []string) error {
 
 	if latest == current {
 		fmt.Printf("  %s  %s\n", ui.Success.Render("✓"),
-			ui.Muted.Render("already on the latest (v"+current+") — ur good fr"))
+			ui.Muted.Render("already on the latest (v"+current+") — you're good to go"))
 		fmt.Println()
 		return nil
 	}
