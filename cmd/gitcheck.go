@@ -13,10 +13,11 @@ import (
 // gitCheckCmd is called by the git() shell wrapper installed by `pulse git-guard on`.
 // It evaluates only SeverityBlock rules. Exit 0 = git proceeds. Exit 1 = git is blocked.
 var gitCheckCmd = &cobra.Command{
-	Use:    "git-check",
-	Short:  "pre-execution git rule check (called by git-guard wrapper)",
-	Hidden: true,
-	RunE:   runGitCheck,
+	Use:                "git-check",
+	Short:              "pre-execution git rule check (called by git-guard wrapper)",
+	Hidden:             true,
+	DisableFlagParsing: true, // all args belong to git, not cobra
+	RunE:               runGitCheck,
 }
 
 func init() {
