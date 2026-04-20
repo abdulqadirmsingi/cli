@@ -1,15 +1,3 @@
-// Package tui implements the interactive live dashboard using Bubble Tea.
-//
-// 🧠 Go Lesson #31: Bubble Tea follows the Elm Architecture — a pattern from
-// functional programming that makes UIs completely predictable:
-//
-//   Model  — all application state lives in one struct
-//   Init   — the first Cmd to run when the program starts
-//   Update — handles incoming events, returns a new Model + next Cmd
-//   View   — renders the Model to a string (pure: same input → same output)
-//
-// Because Update returns a NEW Model instead of mutating, bugs become easy to
-// reproduce: just replay the same sequence of messages.
 package tui
 
 import (
