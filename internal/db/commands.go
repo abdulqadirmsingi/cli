@@ -130,6 +130,42 @@ func (db *DB) calcStreak() int {
 	return streak
 }
 
+// CommandRow is a single raw command entry for display in history.
+type CommandRow struct {
+	Command    string
+	ExitCode   int
+	DurationMS int64
+	CreatedAt  time.Time
+	Noise      bool
+}
+
+// GetTodayCommands returns every command logged today in chronological order.
+// Noise commands are included but flagged so the caller can filter or style them.
+func (db *DB) GetTodayCommands() ([]CommandRow, error) {
+	today := time.Now().Format("2006-01-02")
+	rows, err := db.conn.Query(`
+		SELECT command, exit_code, duration_ms, created_at, noise
+		FROM commands
+		WHERE DATE(created_at) = ? AND TRIM(command) != ''
+		ORDER BY created_at ASC`, today)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []CommandRow
+	for rows.Next() {
+		var c CommandRow
+		var noise int
+		if err := rows.Scan(&c.Command, &c.ExitCode, &c.DurationMS, &c.CreatedAt, &noise); err != nil {
+			continue
+		}
+		c.Noise = noise == 1
+		out = append(out, c)
+	}
+	return out, rows.Err()
+}
+
 func (d *DB) ResetCommands() (int64, error) {
 	res, err := d.conn.Exec(`DELETE FROM commands`)
 	if err != nil {
