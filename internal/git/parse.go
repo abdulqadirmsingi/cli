@@ -6,9 +6,10 @@ import "strings"
 type Event struct {
 	Subcommand string   // "commit", "push", "checkout", etc.
 	Args       []string // args after the subcommand
-	Branch     string   // branch at time of command, from .git/HEAD
+	Branch     string   // local branch at time of command, from .git/HEAD
 	IsForce    bool     // --force or -f present in args
-	Remote     string   // first non-flag positional after subcommand for push/pull/fetch
+	Remote     string   // first non-flag positional for push/pull/fetch
+	PushTarget string   // explicit target branch for `git push <remote> <branch>`
 	Message    string   // -m value for git commit
 	Dir        string   // working directory
 }
