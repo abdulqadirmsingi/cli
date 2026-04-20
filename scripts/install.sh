@@ -26,7 +26,15 @@ ARCH=$(uname -m)
 case "$ARCH" in
     x86_64)        ARCH="amd64" ;;
     aarch64|arm64) ARCH="arm64" ;;
-    *) echo -e "${RED}unsupported arch: $ARCH${R}"; exit 1 ;;
+    *) echo -e "${RED}  unsupported arch: $ARCH${R}"; exit 1 ;;
+esac
+
+# ── Detect shell config file ───────────────────────────────────────────
+SHELL_RC=""
+case "$SHELL" in
+    */zsh)  SHELL_RC="$HOME/.zshrc" ;;
+    */bash) SHELL_RC="$HOME/.bashrc" ;;
+    *)      SHELL_RC="$HOME/.bashrc" ;;
 esac
 
 # ── Fetch latest release tag ───────────────────────────────────────────
@@ -52,25 +60,26 @@ rm -f "/tmp/${ARCHIVE}"
 # ── Install to ~/.local/bin (no sudo needed) ───────────────────────────
 mkdir -p "$INSTALL_DIR"
 mv "/tmp/${BINARY}" "${INSTALL_DIR}/${BINARY}"
+echo -e "  ${GREEN}✓${R}  binary installed to ${INSTALL_DIR}/${BINARY}"
 
-# ── Add to PATH if needed ──────────────────────────────────────────────
-SHELL_RC=""
-case "$SHELL" in
-    */zsh)  SHELL_RC="$HOME/.zshrc" ;;
-    */bash) SHELL_RC="$HOME/.bashrc" ;;
-esac
-
-if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]] && [ -n "$SHELL_RC" ]; then
+# ── Add ~/.local/bin to PATH in shell config if missing ───────────────
+if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
     echo "" >> "$SHELL_RC"
     echo "export PATH=\"\$HOME/.local/bin:\$PATH\"" >> "$SHELL_RC"
-    echo -e "  added ${CYAN}~/.local/bin${R} to PATH in ${SHELL_RC}"
+    echo -e "  ${GREEN}✓${R}  added ~/.local/bin to PATH in ${SHELL_RC}"
+    export PATH="$INSTALL_DIR:$PATH"
 fi
 
+# ── Run pulse init automatically ──────────────────────────────────────
 echo ""
-echo -e "  ${GREEN}✓ pulse ${VERSION} installed!${R}"
+"${INSTALL_DIR}/${BINARY}" init
+
+# ── Done ──────────────────────────────────────────────────────────────
 echo ""
-echo -e "  next steps:"
-echo -e "    ${CYAN}source ${SHELL_RC:-~/.zshrc}${R}   # reload ur shell"
-echo -e "    ${CYAN}pulse init${R}               # set up shell tracking"
-echo -e "    ${CYAN}pulse stats${R}              # check ur dev pulse 📊"
+echo -e "${CYAN}${BOLD}  one last step — activate the shell hook:${R}"
+echo ""
+echo -e "  ${CYAN}source ${SHELL_RC}${R}"
+echo ""
+echo -e "  after that, every command you run is tracked automatically."
+echo -e "  run ${CYAN}pulse stats${R} anytime to see ur dev pulse 📊"
 echo ""
