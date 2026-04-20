@@ -15,7 +15,7 @@ var statsDays int
 
 var statsCmd = &cobra.Command{
 	Use:   "stats",
-	Short: "check your dev stats 📊",
+	Short: "view your activity stats 📊",
 	Long:  "Shows your command count, grind time, streak, top commands, and top projects.",
 	RunE:  runStats,
 }

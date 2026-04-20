@@ -18,7 +18,7 @@ var initReinstall bool
 
 var initCmd = &cobra.Command{
 	Use:   "init",
-	Short: "set up Pulse on ur machine fr fr 🚀",
+	Short: "set up Pulse on your machine 🚀",
 	Long:  "Creates the data directory, initialises the database, and installs shell hooks.",
 	RunE:  runInit,
 }
