@@ -79,6 +79,11 @@ func runInit(_ *cobra.Command, _ []string) error {
 			cyan.Render("  pulse stats"),
 	))
 	fmt.Println()
+	fmt.Println(ui.Muted.Render("  🔒 level up your git discipline (optional but worth it):"))
+	fmt.Println()
+	fmt.Printf("  %s  %s\n", cyan.Render("pulse hooks install"), ui.Muted.Render("track commits from VS Code, Cursor & GitHub Desktop"))
+	fmt.Printf("  %s  %s\n", cyan.Render("pulse git-guard on "), ui.Muted.Render("block force-pushes to main before they happen"))
+	fmt.Println()
 	return nil
 }
 

@@ -42,8 +42,8 @@ func (r *ConventionalCommitRule) Evaluate(e *git.Event) *Violation {
 	return &Violation{
 		Severity: SeverityWarn,
 		Rule:     r.Name(),
-		Message:  "commit message doesn't follow conventional format",
-		Fix:      "use: feat: / fix: / chore: / docs: / refactor: / test:",
+		Message:  "Commit message doesn't follow conventional format",
+		Fix:      "What type of change? try using: feat: / fix: / chore: / docs: / refactor: / test:",
 	}
 }
 
@@ -62,8 +62,8 @@ func (r *FridayAfternoonRule) Evaluate(e *git.Event) *Violation {
 	return &Violation{
 		Severity: SeverityWarn,
 		Rule:     r.Name(),
-		Message:  "pushing on a Friday afternoon — make sure this is well tested",
-		Fix:      "if it can wait until Monday, it probably should",
+		Message:  "Pushing on a Friday afternoon — make sure this is well tested",
+		Fix:      "If it can wait until Monday, it probably should",
 	}
 }
 
@@ -85,8 +85,8 @@ func (r *DirectPushMainRule) Evaluate(e *git.Event) *Violation {
 	return &Violation{
 		Severity: SeverityWarn,
 		Rule:     r.Name(),
-		Message:  "pushing directly to " + target + " — consider opening a PR instead",
-		Fix:      "git checkout -b feat/your-change, push that, then open a PR",
+		Message:  "Pushing directly to " + target + " — open a PR instead",
+		Fix:      "git switch -c feat/your-change  →  push  →  open a PR",
 	}
 }
 
@@ -102,8 +102,8 @@ func (r *EmptyMergeMessageRule) Evaluate(e *git.Event) *Violation {
 		return &Violation{
 			Severity: SeverityWarn,
 			Rule:     r.Name(),
-			Message:  "bare `git merge` with no branch specified",
-			Fix:      "specify the branch: git merge feat/your-feature",
+			Message:  "Bare `git merge` with no branch specified",
+			Fix:      "Which branch? Try: git merge feat/your-feature",
 		}
 	}
 	return nil
