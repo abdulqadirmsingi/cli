@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/devpulse-cli/devpulse/internal/config"
@@ -106,6 +105,5 @@ func runHistory(_ *cobra.Command, _ []string) error {
 		fmt.Println()
 	}
 
-	_ = strings.TrimSpace // keep import used
 	return nil
 }
