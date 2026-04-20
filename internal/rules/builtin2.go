@@ -19,6 +19,11 @@ var conventionalPrefixes = []string{
 	"test(", "perf(", "ci(", "build(", "revert(",
 }
 
+var conventionalTypes = []string{
+	"feat", "fix", "chore", "docs", "style", "refactor",
+	"test", "perf", "ci", "build", "revert",
+}
+
 func (r *ConventionalCommitRule) Evaluate(e *git.Event) *Violation {
 	if e.Subcommand != "commit" || e.Message == "" {
 		return nil
@@ -39,11 +44,26 @@ func (r *ConventionalCommitRule) Evaluate(e *git.Event) *Violation {
 			return nil
 		}
 	}
+	// detect "fix something" written without the colon — more helpful than the generic hint
+	fields := strings.Fields(msg)
+	if len(fields) > 1 {
+		firstWord := strings.ToLower(fields[0])
+		for _, t := range conventionalTypes {
+			if firstWord == t {
+				return &Violation{
+					Severity: SeverityWarn,
+					Rule:     r.Name(),
+					Message:  "Almost there — missing the colon after '" + firstWord + "'",
+					Fix:      "Try: " + firstWord + ": " + strings.Join(fields[1:], " "),
+				}
+			}
+		}
+	}
 	return &Violation{
 		Severity: SeverityWarn,
 		Rule:     r.Name(),
 		Message:  "Commit message doesn't follow conventional format",
-		Fix:      "What type of change? try using: feat: / fix: / chore: / docs: / refactor: / test:",
+		Fix:      "What type of change? Try: feat: / fix: / chore: / docs: / refactor: / test:",
 	}
 }
 
