@@ -84,7 +84,3 @@ and get the new version installed in-place.
 - `PATCH` (0.2.**1**) — bug fix only, no new commands or flags
 - `MINOR` (0.**3**.0) — new command, new flag, or changed output format
 - `MAJOR` (**1**.0.0) — breaking change to hook format, DB schema, or config structure
-
-## Go Lessons Index
-
-Inline comments in the codebase are labelled `🧠 Go Lesson #N`. Current range: #1–#50. The next lesson added should be #51. Topics covered so far include: package main, Cobra flags, SQLite with `database/sql`, lipgloss styling, Bubble Tea Elm architecture, `iota` and named types, `os.Executable`, `regexp.MustCompile` vs `Compile`, `fmt.Sprintf` with `%%` escaping, `runtime.GOOS`/`runtime.GOARCH`, and atomic file replacement.
