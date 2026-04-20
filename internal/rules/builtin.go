@@ -134,21 +134,12 @@ func hasCreateFlag(args []string) bool {
 }
 
 // newBranchName returns the new branch name from checkout/switch args.
+// For `git checkout -b feat/x` and `git switch -b feat/x` it returns "feat/x".
 func newBranchName(args []string) string {
-	skip := false
-	for _, a := range args {
-		if skip {
-			skip = false
-			continue
+	for i, a := range args {
+		if (a == "-b" || a == "-B") && i+1 < len(args) {
+			return args[i+1]
 		}
-		if a == "-b" || a == "-B" {
-			skip = true
-			continue
-		}
-		if strings.HasPrefix(a, "-") {
-			continue
-		}
-		return a
 	}
 	return ""
 }
