@@ -3,6 +3,7 @@ package cmd
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/devpulse-cli/devpulse/internal/config"
@@ -10,8 +11,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// logCmd is intentionally hidden from `pulse help` — it's called by the shell
-// hook automatically, not by the user directly.
 var logCmd = &cobra.Command{
 	Use:    "log",
 	Short:  "log a shell command (called by the shell hook)",
@@ -19,11 +18,6 @@ var logCmd = &cobra.Command{
 	RunE:   runLog,
 }
 
-// Flag variables for `pulse log`.
-//
-// 🧠 Go Lesson #27: Cobra flags bind directly to Go variables via pointers.
-// StringVar, IntVar, Int64Var all write their parsed value into the variable
-// you pass. This avoids manual string-to-type conversion boilerplate.
 var (
 	logFlagCmd  string
 	logFlagExit int
@@ -39,26 +33,34 @@ func init() {
 	logCmd.Flags().StringVar(&logFlagDir, "dir", "", "working directory")
 }
 
-// runLog fires on every command the user runs (via shell hook).
-// It must be fast and silent — failures are swallowed so they never
-// interrupt the user's actual workflow.
-//
-// 🧠 Go Lesson #28: Returning nil from a RunE function means "success".
-// Here we return nil even on internal errors because this runs in the
-// background and should NEVER cause visible noise in the terminal.
+// reANSI matches ANSI/VT100 escape sequences that terminals embed in command strings.
+// 🧠 Go Lesson #51: Package-level compiled regexps are free after startup —
+// compile once with MustCompile, reuse on every call with no allocation.
+var reANSI = regexp.MustCompile(`\x1b(?:\[[0-9;?]*[a-zA-Z]|\][^\x07]*\x07|[^[\]])`)
+
+// sanitizeCmd strips escape sequences, control characters, and excess whitespace
+// from a raw command string captured by the shell hook.
+// zsh's preexec passes $1 with leading/trailing spaces and sometimes embedded
+// ANSI codes from syntax-highlighting plugins — this normalises all of that.
+func sanitizeCmd(cmd string) string {
+	cmd = reANSI.ReplaceAllString(cmd, "")
+	// collapse all whitespace runs to single spaces, trim edges
+	return strings.Join(strings.Fields(cmd), " ")
+}
+
 func runLog(_ *cobra.Command, _ []string) error {
-	if shouldSkip(logFlagCmd) {
+	cmd := sanitizeCmd(logFlagCmd)
+	if shouldSkip(cmd) {
 		return nil
 	}
 
 	cfg, err := config.Load()
 	if err != nil {
-		return nil // silent fail
+		return nil
 	}
-
 	database, err := db.Open(cfg.DBPath)
 	if err != nil {
-		return nil // silent fail
+		return nil
 	}
 	defer database.Close()
 
@@ -68,13 +70,11 @@ func runLog(_ *cobra.Command, _ []string) error {
 	}
 
 	project := projectFromDir(dir)
-	_ = database.InsertCommand(logFlagCmd, dir, project, logFlagExit, logFlagMS)
+	_ = database.InsertCommand(cmd, dir, project, logFlagExit, logFlagMS)
 	return nil
 }
 
-// shouldSkip returns true for commands we don't want to log.
 func shouldSkip(cmd string) bool {
-	cmd = strings.TrimSpace(cmd)
 	if cmd == "" {
 		return true
 	}
@@ -82,13 +82,6 @@ func shouldSkip(cmd string) bool {
 	return base == "pulse"
 }
 
-// projectFromDir resolves a human-readable project name from a directory.
-// It walks up the directory tree looking for a .git folder — that root
-// becomes the project name. Falls back to the immediate directory name.
-//
-// 🧠 Go Lesson #29: filepath.Dir() returns the parent directory.
-// filepath.Base() returns the last path element (the directory name).
-// filepath.Join() builds OS-correct paths (/ on Unix, \ on Windows).
 func projectFromDir(dir string) string {
 	current := dir
 	for {
@@ -97,7 +90,7 @@ func projectFromDir(dir string) string {
 		}
 		parent := filepath.Dir(current)
 		if parent == current {
-			break // reached filesystem root
+			break
 		}
 		current = parent
 	}

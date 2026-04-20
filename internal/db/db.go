@@ -43,6 +43,10 @@ func (db *DB) Close() error {
 }
 
 func (db *DB) migrate() error {
+	db.conn.Exec(`PRAGMA journal_mode=WAL`)
+	db.conn.Exec(`PRAGMA synchronous=NORMAL`)
+	db.conn.Exec(`PRAGMA foreign_keys=ON`)
+
 	_, err := db.conn.Exec(`
 		CREATE TABLE IF NOT EXISTS commands (
 			id          INTEGER  PRIMARY KEY AUTOINCREMENT,
@@ -53,8 +57,9 @@ func (db *DB) migrate() error {
 			duration_ms INTEGER  NOT NULL DEFAULT 0,
 			created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 		);
-		CREATE INDEX IF NOT EXISTS idx_cmd_created ON commands(created_at);
-		CREATE INDEX IF NOT EXISTS idx_cmd_project  ON commands(project);
+		CREATE INDEX IF NOT EXISTS idx_cmd_created          ON commands(created_at);
+		CREATE INDEX IF NOT EXISTS idx_cmd_project          ON commands(project);
+		CREATE INDEX IF NOT EXISTS idx_cmd_project_created  ON commands(project, created_at);
 	`)
 	return err
 }
@@ -93,7 +98,7 @@ func (db *DB) GetTopCommands(days, limit int) ([]TopEntry, error) {
 
 	rows, err := db.conn.Query(`
 		SELECT
-			TRIM(SUBSTR(command, 1, INSTR(TRIM(command) || ' ', ' ') - 1)) AS base_cmd,
+			SUBSTR(TRIM(command), 1, INSTR(TRIM(command) || ' ', ' ') - 1) AS base_cmd,
 			COUNT(*) AS cnt
 		FROM commands
 		WHERE created_at >= ? AND TRIM(command) != ''
