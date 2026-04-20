@@ -114,7 +114,7 @@ func (r *VagueCommitRule) Evaluate(e *git.Event) *Violation {
 			Severity: SeverityWarn,
 			Rule:     r.Name(),
 			Message:  "commit message \"" + msg + "\" is too short to be useful",
-			Fix:      "describe the why: \"fix: prevent nil panic in auth handler\"",
+			Fix:      "what changed? try: \"fix: prevent nil panic in auth handler\"",
 		}
 	}
 	// exact match on known vague words (case-insensitive, ignores punctuation)
@@ -124,7 +124,7 @@ func (r *VagueCommitRule) Evaluate(e *git.Event) *Violation {
 			Severity: SeverityWarn,
 			Rule:     r.Name(),
 			Message:  "commit message \"" + msg + "\" tells future-you nothing",
-			Fix:      "describe the why: \"fix: prevent nil panic in auth handler\"",
+			Fix:      "what changed? try: \"fix: prevent nil panic in auth handler\"",
 		}
 	}
 	return nil
