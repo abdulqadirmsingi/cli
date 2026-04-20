@@ -46,8 +46,8 @@ func (db *DB) migrate() error {
 	db.conn.Exec(`PRAGMA synchronous=NORMAL`)
 	db.conn.Exec(`PRAGMA foreign_keys=ON`)
 
-	_, err := db.conn.Exec(`
-		CREATE TABLE IF NOT EXISTS commands (
+	stmts := []string{
+		`CREATE TABLE IF NOT EXISTS commands (
 			id          INTEGER  PRIMARY KEY AUTOINCREMENT,
 			command     TEXT     NOT NULL,
 			directory   TEXT     NOT NULL DEFAULT '',
@@ -56,11 +56,11 @@ func (db *DB) migrate() error {
 			duration_ms INTEGER  NOT NULL DEFAULT 0,
 			noise       INTEGER  NOT NULL DEFAULT 0,
 			created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-		);
-		CREATE INDEX IF NOT EXISTS idx_cmd_created         ON commands(created_at);
-		CREATE INDEX IF NOT EXISTS idx_cmd_project         ON commands(project);
-		CREATE INDEX IF NOT EXISTS idx_cmd_project_created ON commands(project, created_at);
-		CREATE TABLE IF NOT EXISTS git_events (
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_cmd_created         ON commands(created_at)`,
+		`CREATE INDEX IF NOT EXISTS idx_cmd_project         ON commands(project)`,
+		`CREATE INDEX IF NOT EXISTS idx_cmd_project_created ON commands(project, created_at)`,
+		`CREATE TABLE IF NOT EXISTS git_events (
 			id          INTEGER  PRIMARY KEY AUTOINCREMENT,
 			command_id  INTEGER  REFERENCES commands(id),
 			subcommand  TEXT     NOT NULL,
@@ -69,13 +69,15 @@ func (db *DB) migrate() error {
 			remote      TEXT     NOT NULL DEFAULT '',
 			message     TEXT     NOT NULL DEFAULT '',
 			created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-		);
-		CREATE INDEX IF NOT EXISTS idx_git_branch  ON git_events(branch);
-		CREATE INDEX IF NOT EXISTS idx_git_sub     ON git_events(subcommand);
-		CREATE INDEX IF NOT EXISTS idx_git_created ON git_events(created_at);
-	`)
-	if err != nil {
-		return err
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_git_branch  ON git_events(branch)`,
+		`CREATE INDEX IF NOT EXISTS idx_git_sub     ON git_events(subcommand)`,
+		`CREATE INDEX IF NOT EXISTS idx_git_created ON git_events(created_at)`,
+	}
+	for _, s := range stmts {
+		if _, err := db.conn.Exec(s); err != nil {
+			return err
+		}
 	}
 	// additive column migrations for existing databases
 	db.conn.Exec(`ALTER TABLE commands ADD COLUMN noise INTEGER NOT NULL DEFAULT 0`)
