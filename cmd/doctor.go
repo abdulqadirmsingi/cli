@@ -64,13 +64,22 @@ func runDoctor(_ *cobra.Command, _ []string) error {
 	switch shell {
 	case "zsh":
 		rcFile = filepath.Join(home, ".zshrc")
+	case "fish":
+		rcFile = filepath.Join(home, ".config", "fish", "config.fish")
 	default:
 		rcFile = filepath.Join(home, ".bashrc")
 	}
 
 	content, _ := os.ReadFile(rcFile)
 	if strings.Contains(string(content), "Pulse shell hook") {
-		pass("shell hook installed in " + rcFile)
+		// also verify the binary path in the hook matches this binary
+		self, _ := os.Executable()
+		if self != "" && !strings.Contains(string(content), self) {
+			fail("shell hook references a stale binary path — run: pulse init --reinstall")
+			allGood = false
+		} else {
+			pass("shell hook installed in " + rcFile)
+		}
 	} else {
 		fail("shell hook missing — run: pulse init")
 		allGood = false

@@ -1,6 +1,10 @@
 package db
 
-import "time"
+import (
+	"database/sql"
+	"strings"
+	"time"
+)
 
 func (db *DB) InsertCommand(command, dir, project string, exitCode int, durationMS int64, isNoise bool) error {
 	noise := 0
@@ -32,7 +36,7 @@ func (db *DB) InsertCommandGetID(command, dir, project string, exitCode int, dur
 }
 
 func (db *DB) GetStats(days int) (*Stats, error) {
-	since := time.Now().AddDate(0, 0, -days).Format("2006-01-02")
+	since := time.Now().UTC().AddDate(0, 0, -days).Format("2006-01-02")
 	var s Stats
 	err := db.conn.QueryRow(`
 		SELECT
@@ -52,7 +56,7 @@ func (db *DB) GetStats(days int) (*Stats, error) {
 }
 
 func (db *DB) GetTopCommands(days, limit int) ([]TopEntry, error) {
-	since := time.Now().AddDate(0, 0, -days).Format("2006-01-02")
+	since := time.Now().UTC().AddDate(0, 0, -days).Format("2006-01-02")
 	rows, err := db.conn.Query(`
 		SELECT
 			SUBSTR(TRIM(command), 1, INSTR(TRIM(command) || ' ', ' ') - 1) AS base_cmd,
@@ -79,7 +83,7 @@ func (db *DB) GetTopCommands(days, limit int) ([]TopEntry, error) {
 }
 
 func (db *DB) GetTopProjects(days, limit int) ([]TopEntry, error) {
-	since := time.Now().AddDate(0, 0, -days).Format("2006-01-02")
+	since := time.Now().UTC().AddDate(0, 0, -days).Format("2006-01-02")
 	rows, err := db.conn.Query(`
 		SELECT project, COUNT(*) AS cnt, COALESCE(SUM(duration_ms), 0) AS total_ms
 		FROM commands
@@ -104,9 +108,9 @@ func (db *DB) GetTopProjects(days, limit int) ([]TopEntry, error) {
 
 func (db *DB) calcStreak() int {
 	rows, err := db.conn.Query(`
-		SELECT DISTINCT DATE(created_at) AS day
+		SELECT DISTINCT DATE(created_at, 'localtime') AS day
 		FROM commands
-		WHERE created_at >= DATE('now', '-365 days')
+		WHERE created_at >= datetime('now', '-3650 days')
 		ORDER BY day DESC`)
 	if err != nil {
 		return 0
@@ -114,7 +118,7 @@ func (db *DB) calcStreak() int {
 	defer rows.Close()
 
 	streak := 0
-	expected := time.Now().Format("2006-01-02")
+	expected := time.Now().Format("2006-01-02") // local date
 	for rows.Next() {
 		var day string
 		if err := rows.Scan(&day); err != nil {
@@ -142,12 +146,59 @@ type CommandRow struct {
 // GetTodayCommands returns every command logged today in chronological order.
 // Noise commands are included but flagged so the caller can filter or style them.
 func (db *DB) GetTodayCommands() ([]CommandRow, error) {
-	today := time.Now().Format("2006-01-02")
 	rows, err := db.conn.Query(`
 		SELECT command, exit_code, duration_ms, created_at, noise
 		FROM commands
-		WHERE DATE(created_at) = ? AND TRIM(command) != ''
-		ORDER BY created_at ASC`, today)
+		WHERE DATE(created_at, 'localtime') = DATE('now', 'localtime') AND TRIM(command) != ''
+		ORDER BY created_at ASC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []CommandRow
+	for rows.Next() {
+		var c CommandRow
+		var noise int
+		if err := rows.Scan(&c.Command, &c.ExitCode, &c.DurationMS, &c.CreatedAt, &noise); err != nil {
+			continue
+		}
+		c.Noise = noise == 1
+		out = append(out, c)
+	}
+	return out, rows.Err()
+}
+
+// escapeLike escapes LIKE special characters so user input is treated as a literal string.
+func escapeLike(s string) string {
+	s = strings.ReplaceAll(s, `\`, `\\`)
+	s = strings.ReplaceAll(s, `%`, `\%`)
+	s = strings.ReplaceAll(s, `_`, `\_`)
+	return s
+}
+
+// SearchCommands returns commands matching query (case-insensitive LIKE).
+// days=0 means all-time. Results are ordered newest-first.
+func (db *DB) SearchCommands(query string, days, limit int) ([]CommandRow, error) {
+	pattern := "%" + escapeLike(query) + "%"
+	var (
+		rows *sql.Rows
+		err  error
+	)
+	if days > 0 {
+		since := time.Now().UTC().AddDate(0, 0, -days).Format("2006-01-02")
+		rows, err = db.conn.Query(`
+			SELECT command, exit_code, duration_ms, created_at, noise
+			FROM commands
+			WHERE command LIKE ? ESCAPE '\' AND created_at >= ? AND TRIM(command) != ''
+			ORDER BY created_at DESC LIMIT ?`, pattern, since, limit)
+	} else {
+		rows, err = db.conn.Query(`
+			SELECT command, exit_code, duration_ms, created_at, noise
+			FROM commands
+			WHERE command LIKE ? ESCAPE '\' AND TRIM(command) != ''
+			ORDER BY created_at DESC LIMIT ?`, pattern, limit)
+	}
 	if err != nil {
 		return nil, err
 	}
