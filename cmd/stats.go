@@ -74,9 +74,13 @@ func renderOverview(s *db.Stats) string {
 	case s.StreakDays >= 7:
 		streak += " 🔥"
 	}
+	cmdValue := ui.FormatNumber(s.TotalCommands)
+	if s.NoiseCommands > 0 {
+		cmdValue += ui.Muted.Render(fmt.Sprintf("  ·  +%s noise", ui.FormatNumber(s.NoiseCommands)))
+	}
 	rows := []string{
 		statRow("🔥  streak", streak),
-		statRow("⚡  commands", ui.FormatNumber(s.TotalCommands)),
+		statRowRaw("⚡  commands", cmdValue),
 		statRow("⏰  grind time", ui.FormatDuration(s.TotalTimeMS)),
 		statRow("✅  success rate", fmt.Sprintf("%.1f%%", s.SuccessRate)),
 	}
@@ -85,6 +89,11 @@ func renderOverview(s *db.Stats) string {
 
 func statRow(label, value string) string {
 	return ui.Label.Render(label) + ui.Value.Render(value)
+}
+
+// statRowRaw renders a row where value is already styled.
+func statRowRaw(label, value string) string {
+	return ui.Label.Render(label) + value
 }
 
 func renderBarSection(title string, entries []db.TopEntry, byTime bool) string {

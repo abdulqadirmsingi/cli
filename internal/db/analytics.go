@@ -25,11 +25,6 @@ type ProjectSummary struct {
 	SuccessRate float64
 }
 
-// GetHourlyStats returns command counts for each hour of the given date (YYYY-MM-DD).
-//
-// 🧠 Go Lesson #30: strftime is SQLite's time formatter.
-// CAST(...AS INTEGER) converts the "09" string to integer 9.
-// We pass a plain string date so the query is parameterised (safe from injection).
 func (db *DB) GetHourlyStats(date string) ([]HourlyBucket, error) {
 	rows, err := db.conn.Query(`
 		SELECT CAST(strftime('%H', created_at) AS INTEGER) AS hr, COUNT(*) AS cnt
@@ -84,12 +79,14 @@ func (db *DB) GetTodayStats() (*Stats, error) {
 	var s Stats
 	err := db.conn.QueryRow(`
 		SELECT
-			COUNT(*) AS total,
-			COALESCE(SUM(duration_ms), 0) AS total_ms,
-			COALESCE(AVG(CASE WHEN exit_code = 0 THEN 1.0 ELSE 0.0 END) * 100, 0) AS success_rate
+			COALESCE(SUM(CASE WHEN noise = 0 THEN 1 ELSE 0 END), 0)  AS dev_total,
+			COALESCE(SUM(CASE WHEN noise = 1 THEN 1 ELSE 0 END), 0)  AS noise_total,
+			COALESCE(SUM(CASE WHEN noise = 0 THEN duration_ms ELSE 0 END), 0) AS total_ms,
+			COALESCE(AVG(CASE WHEN noise = 0 AND exit_code = 0 THEN 1.0
+			               WHEN noise = 0 THEN 0.0 END) * 100, 0)   AS success_rate
 		FROM commands
 		WHERE DATE(created_at) = ?`, today).
-		Scan(&s.TotalCommands, &s.TotalTimeMS, &s.SuccessRate)
+		Scan(&s.TotalCommands, &s.NoiseCommands, &s.TotalTimeMS, &s.SuccessRate)
 	return &s, err
 }
 

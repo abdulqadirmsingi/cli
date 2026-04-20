@@ -70,8 +70,19 @@ func runLog(_ *cobra.Command, _ []string) error {
 	}
 
 	project := projectFromDir(dir)
-	_ = database.InsertCommand(cmd, dir, project, logFlagExit, logFlagMS)
+	_ = database.InsertCommand(cmd, dir, project, logFlagExit, logFlagMS, isNoise(cmd))
 	return nil
+}
+
+// noiseCommands are shell housekeeping commands that clutter dev stats.
+var noiseCommands = map[string]bool{
+	"clear": true, "cls": true,
+	"ls": true, "ll": true, "la": true, "l": true,
+	"cd": true, "pwd": true,
+	"exit": true, "logout": true,
+	"history": true,
+	"cat": true, "less": true, "more": true,
+	"man": true,
 }
 
 func shouldSkip(cmd string) bool {
@@ -80,6 +91,14 @@ func shouldSkip(cmd string) bool {
 	}
 	base := strings.Fields(cmd)[0]
 	return base == "pulse"
+}
+
+func isNoise(cmd string) bool {
+	if cmd == "" {
+		return false
+	}
+	base := strings.Fields(cmd)[0]
+	return noiseCommands[base]
 }
 
 func projectFromDir(dir string) string {

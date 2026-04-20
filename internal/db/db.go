@@ -13,6 +13,7 @@ type DB struct {
 
 type Stats struct {
 	TotalCommands int64
+	NoiseCommands int64
 	TotalTimeMS   int64
 	SuccessRate   float64
 	StreakDays    int
@@ -55,20 +56,30 @@ func (db *DB) migrate() error {
 			project     TEXT     NOT NULL DEFAULT '',
 			exit_code   INTEGER  NOT NULL DEFAULT 0,
 			duration_ms INTEGER  NOT NULL DEFAULT 0,
+			noise       INTEGER  NOT NULL DEFAULT 0,
 			created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 		);
 		CREATE INDEX IF NOT EXISTS idx_cmd_created          ON commands(created_at);
 		CREATE INDEX IF NOT EXISTS idx_cmd_project          ON commands(project);
 		CREATE INDEX IF NOT EXISTS idx_cmd_project_created  ON commands(project, created_at);
 	`)
-	return err
+	if err != nil {
+		return err
+	}
+	// add noise column to existing databases that predate this migration
+	db.conn.Exec(`ALTER TABLE commands ADD COLUMN noise INTEGER NOT NULL DEFAULT 0`)
+	return nil
 }
 
-func (db *DB) InsertCommand(command, dir, project string, exitCode int, durationMS int64) error {
+func (db *DB) InsertCommand(command, dir, project string, exitCode int, durationMS int64, isNoise bool) error {
+	noise := 0
+	if isNoise {
+		noise = 1
+	}
 	_, err := db.conn.Exec(
-		`INSERT INTO commands (command, directory, project, exit_code, duration_ms)
-		 VALUES (?, ?, ?, ?, ?)`,
-		command, dir, project, exitCode, durationMS,
+		`INSERT INTO commands (command, directory, project, exit_code, duration_ms, noise)
+		 VALUES (?, ?, ?, ?, ?, ?)`,
+		command, dir, project, exitCode, durationMS, noise,
 	)
 	return err
 }
@@ -79,12 +90,14 @@ func (db *DB) GetStats(days int) (*Stats, error) {
 	var s Stats
 	err := db.conn.QueryRow(`
 		SELECT
-			COUNT(*)                                                AS total,
-			COALESCE(SUM(duration_ms), 0)                          AS total_ms,
-			COALESCE(AVG(CASE WHEN exit_code = 0 THEN 1.0 ELSE 0.0 END) * 100, 0) AS success_rate
+			COALESCE(SUM(CASE WHEN noise = 0 THEN 1 ELSE 0 END), 0)  AS dev_total,
+			COALESCE(SUM(CASE WHEN noise = 1 THEN 1 ELSE 0 END), 0)  AS noise_total,
+			COALESCE(SUM(CASE WHEN noise = 0 THEN duration_ms ELSE 0 END), 0) AS total_ms,
+			COALESCE(AVG(CASE WHEN noise = 0 AND exit_code = 0 THEN 1.0
+			               WHEN noise = 0 THEN 0.0 END) * 100, 0)   AS success_rate
 		FROM commands
 		WHERE created_at >= ?`, since).
-		Scan(&s.TotalCommands, &s.TotalTimeMS, &s.SuccessRate)
+		Scan(&s.TotalCommands, &s.NoiseCommands, &s.TotalTimeMS, &s.SuccessRate)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +114,7 @@ func (db *DB) GetTopCommands(days, limit int) ([]TopEntry, error) {
 			SUBSTR(TRIM(command), 1, INSTR(TRIM(command) || ' ', ' ') - 1) AS base_cmd,
 			COUNT(*) AS cnt
 		FROM commands
-		WHERE created_at >= ? AND TRIM(command) != ''
+		WHERE created_at >= ? AND TRIM(command) != '' AND noise = 0
 		GROUP BY base_cmd
 		HAVING base_cmd != ''
 		ORDER BY cnt DESC
