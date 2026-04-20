@@ -85,8 +85,8 @@ func (r *DirectPushMainRule) Evaluate(e *git.Event) *Violation {
 	return &Violation{
 		Severity: SeverityWarn,
 		Rule:     r.Name(),
-		Message:  "pushing directly to " + target + " — consider opening a PR instead",
-		Fix:      "git checkout -b feat/your-change, push that, then open a PR",
+		Message:  "pushing directly to " + target + " — open a PR instead",
+		Fix:      "git switch -c feat/your-change  →  push  →  open a PR",
 	}
 }
 

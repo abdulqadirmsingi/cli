@@ -50,7 +50,7 @@ func (r *DirectMainRule) Evaluate(e *git.Event) *Violation {
 		Severity: SeverityWarn,
 		Rule:     r.Name(),
 		Message:  "direct commit to " + e.Branch + " — consider a feature branch",
-		Fix:      "try: git checkout -b feat/your-change",
+		Fix:      "try: git switch -c feat/your-change",
 	}
 }
 
