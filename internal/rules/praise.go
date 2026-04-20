@@ -20,6 +20,21 @@ var commitPraises = []string{
 	"Commit message game strong 💪",
 	"Exactly what git log should look like",
 	"Now that's a commit message worth keeping",
+	"Pulse approves this commit message 🤌",
+	"Your teammates just smiled reading that commit 😊",
+	"Pulse has seen 10,000 commits — this one passes 🎯",
+	"Somewhere a senior dev shed a single tear of joy",
+	"Future-you will actually know what happened here — rare",
+	"Your code reviewer's prayers have been answered",
+	"Your git log is going to look so clean because of this 📖",
+	"Clean, clear, conventional — the holy trinity ✅",
+	"Code archaeologists in 2040 will understand this. Respect.",
+	"Pulse clocked the conventional format. Keep going 📊",
+	"No 'wip wip wip' detected — you're evolving 📈",
+	"That commit message could honestly be in a textbook fr",
+	"Pulse is silently judging everyone else's commits rn",
+	"The kind of message that makes PRs a joy to review 🚀",
+	"Your future self just sent you a thank you note",
 }
 
 var branchPraises = []string{
@@ -32,6 +47,12 @@ var branchPraises = []string{
 	"Branch name on point 🔥",
 	"This is how PRs stay organized",
 	"Future-you won't be confused by this one",
+	"Pulse can tell what this branch does without reading a single line of code 👀",
+	"Anyone opening this PR will immediately know what's going on",
+	"Feat/fix/chore discipline — Pulse respects it 🫡",
+	"A branch name so good it barely needs a PR description",
+	"Your branch naming is so clean it's suspicious",
+	"Future-you won't spend 10 minutes wondering what this was",
 }
 
 var pushPraises = []string{
@@ -40,6 +61,13 @@ var pushPraises = []string{
 	"PR flow respected 🤝",
 	"That's how team players push code",
 	"Feature branch push — good discipline ✓",
+	"Keeping main clean — Pulse clocked that 👀",
+	"Main is sacred and you already know it 🙏",
+	"Feature branch push, exactly how it's supposed to go ✅",
+	"Somewhere a CI pipeline is about to be very happy",
+	"PR flow intact, team flow intact — Pulse approves 🤝",
+	"Main stays untouched. Pulse respects that discipline 🔥",
+	"Clean push to a feature branch — this is the way 🚀",
 }
 
 var goodBranchPrefixes = []string{
@@ -47,7 +75,6 @@ var goodBranchPrefixes = []string{
 	"test/", "perf/", "ci/", "build/", "hotfix/",
 }
 
-// GoodCommitPraise fires when a commit message follows the conventional format.
 type GoodCommitPraise struct{}
 
 func (r *GoodCommitPraise) Name() string { return "good-commit" }
