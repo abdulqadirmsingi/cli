@@ -75,9 +75,9 @@ Requires Go 1.21+.
 
 | Command | What it does |
 |---------|-------------|
-| `pulse git-hooks install` | track commits from VS Code, Cursor, GitHub Desktop — not just the terminal |
-| `pulse git-hooks uninstall` | remove the global git hooks |
-| `pulse git-hooks status` | check which hooks are active |
+| `pulse hooks install` | track commits from VS Code, Cursor, GitHub Desktop — not just the terminal |
+| `pulse hooks uninstall` | remove the global git hooks |
+| `pulse hooks status` | check which hooks are active |
 | `pulse git-guard on` | block force-pushes to main before they run (terminal only) |
 | `pulse git-guard off` | disable the guard |
 | `pulse git-guard status` | check if the guard is active |
@@ -168,7 +168,7 @@ By default, Pulse only sees commands you type in the terminal. If you commit thr
 Run this once to fix that:
 
 ```bash
-pulse git-hooks install
+pulse hooks install
 ```
 
 This sets a global git hooks path (`~/.config/git/hooks`) that fires for **every** git operation on your machine, regardless of where it originates. The `post-commit` hook logs the commit. The `pre-push` hook detects force-pushes by comparing commit SHAs — no flags required, so it catches force-pushes even from GUI clients.
@@ -176,9 +176,9 @@ This sets a global git hooks path (`~/.config/git/hooks`) that fires for **every
 | How you commit | Tracked | Force-push blocked |
 |----------------|---------|-------------------|
 | Terminal | ✅ | ✅ (with git-guard on) |
-| VS Code / Cursor panel | ✅ after `git-hooks install` | ✅ after `git-hooks install` |
-| GitHub Desktop | ✅ after `git-hooks install` | ✅ after `git-hooks install` |
-| AI-generated commit (Cursor) | ✅ after `git-hooks install` | ✅ after `git-hooks install` |
+| VS Code / Cursor panel | ✅ after `hooks install` | ✅ after `hooks install` |
+| GitHub Desktop | ✅ after `hooks install` | ✅ after `hooks install` |
+| AI-generated commit (Cursor) | ✅ after `hooks install` | ✅ after `hooks install` |
 
 ---
 
@@ -307,7 +307,7 @@ Run `pulse doctor` — it checks your setup end to end. The most common cause: t
 
 **IDE commits aren't showing up**
 
-Run `pulse git-hooks install` — the shell hook only fires in the terminal.
+Run `pulse hooks install` — the shell hook only fires in the terminal.
 
 **Stats look wrong**
 
@@ -320,7 +320,7 @@ Run `pulse git-hooks install` — the shell hook only fires in the terminal.
 | Path | What's there |
 |------|-------------|
 | `~/.devpulse/pulse.db` | SQLite database — all your command history |
-| `~/.config/git/hooks/` | Global git hooks (only if you ran `git-hooks install`) |
+| `~/.config/git/hooks/` | Global git hooks (only if you ran `hooks install`) |
 
 ---
 

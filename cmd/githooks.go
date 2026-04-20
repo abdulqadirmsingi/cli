@@ -12,7 +12,7 @@ import (
 )
 
 var gitHooksCmd = &cobra.Command{
-	Use:   "git-hooks [install|uninstall|status]",
+	Use:   "hooks [install|uninstall|status]",
 	Short: "track git activity from any client — IDE, terminal, desktop 🔗",
 	Long:  "Installs global git hooks so Pulse tracks commits and blocks force-pushes regardless of whether you use the terminal, VS Code, Cursor, or GitHub Desktop.",
 	Args:  cobra.ExactArgs(1),
