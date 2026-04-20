@@ -39,9 +39,21 @@ func (r *ConventionalCommitRule) Evaluate(e *git.Event) *Violation {
 		return nil
 	}
 	lower := strings.ToLower(msg)
+	// check original-case first — correct conventional format passes cleanly
+	for _, p := range conventionalPrefixes {
+		if strings.HasPrefix(msg, p) {
+			return nil
+		}
+	}
+	// detect correct type but wrong case (e.g. "FIX: something", "Feat: add x")
 	for _, p := range conventionalPrefixes {
 		if strings.HasPrefix(lower, p) {
-			return nil
+			return &Violation{
+				Severity: SeverityWarn,
+				Rule:     r.Name(),
+				Message:  "Conventional format, but the prefix should be lowercase",
+				Fix:      "Try: " + strings.ToLower(strings.SplitN(msg, " ", 2)[0]) + " " + strings.SplitN(msg, " ", 2)[1],
+			}
 		}
 	}
 	// detect "fix something" written without the colon — more helpful than the generic hint
