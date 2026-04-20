@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -116,6 +117,13 @@ func runFavAdd(_ *cobra.Command, args []string) error {
 	defer database.Close()
 
 	id, err := database.AddFavorite(command, favAddAlias)
+	if errors.Is(err, db.ErrAlreadySaved) {
+		fmt.Println()
+		cyan := lipgloss.NewStyle().Foreground(ui.ColorCyan)
+		fmt.Println("  " + ui.Muted.Render(fmt.Sprintf("already saved as #%d  —  see it with ", id)) + cyan.Render("pulse f"))
+		fmt.Println()
+		return nil
+	}
 	if err != nil {
 		return fmt.Errorf("saving favourite: %w", err)
 	}

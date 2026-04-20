@@ -32,6 +32,9 @@ func init() {
 
 func runSearch(_ *cobra.Command, args []string) error {
 	query := args[0]
+	if query == "" {
+		return fmt.Errorf("query can't be empty — try  pulse s git  or  pulse s docker")
+	}
 
 	cfg, err := config.Load()
 	if err != nil {
@@ -64,14 +67,13 @@ func runSearch(_ *cobra.Command, args []string) error {
 		return nil
 	}
 
-	timeStyle := lipgloss.NewStyle().Foreground(ui.ColorGray).Width(10)
 	cmdStyle  := lipgloss.NewStyle().Foreground(ui.ColorCyan)
 	durStyle  := lipgloss.NewStyle().Foreground(ui.ColorGray)
 	failStyle := lipgloss.NewStyle().Foreground(ui.ColorRed)
-	dateStyle := lipgloss.NewStyle().Foreground(ui.ColorGray)
+	dateStyle := lipgloss.NewStyle().Foreground(ui.ColorGray).Width(14)
 
 	for _, c := range cmds {
-		date := c.CreatedAt.Format("01/02 15:04")
+		date := c.CreatedAt.Local().Format("01/02 15:04")
 		dur  := ui.FormatDuration(c.DurationMS)
 		cmd  := ui.Truncate(c.Command, 60)
 
@@ -87,17 +89,20 @@ func runSearch(_ *cobra.Command, args []string) error {
 			exitMark = " " + failStyle.Render(fmt.Sprintf("✗ %d", c.ExitCode))
 		}
 
-		fmt.Printf("  %s  %s  %s%s\n",
+		fmt.Printf("  %s  %s%s  %s\n",
 			dateStyle.Render(date),
-			timeStyle.Render(""),
 			cmdRendered,
 			exitMark,
+			durStyle.Render(dur),
 		)
-		_ = durStyle.Render(dur) // available if we want to add duration column later
 	}
 
 	fmt.Println()
-	fmt.Println("  " + ui.Muted.Render(fmt.Sprintf("%d match(es)", len(cmds))))
+	word := "matches"
+	if len(cmds) == 1 {
+		word = "match"
+	}
+	fmt.Println("  " + ui.Muted.Render(fmt.Sprintf("%d %s", len(cmds), word)))
 	fmt.Println()
 
 	cyan := lipgloss.NewStyle().Foreground(ui.ColorCyan)
