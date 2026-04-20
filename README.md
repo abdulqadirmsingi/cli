@@ -11,178 +11,164 @@
   ╚═╝      ╚═════╝ ╚══════╝╚══════╝╚══════╝
 ```
 
-Pulse sits quietly in your shell and logs every command you run — which tools you reach for, how much time you spend per project, your streak of active days, and your overall success rate. Then it surfaces all of that in a clean, opinionated dashboard that actually tells you something useful.
+Pulse sits quietly in your shell and logs every command you run — which tools you reach for, how much time you spend per project, your streak of active days, and your overall success rate. Then it surfaces all of that in a clean dashboard that actually tells you something useful.
 
-No cloud, no account, no phone number. Everything lives in a single SQLite file at `~/.devpulse/pulse.db`.
+No cloud. No account. No phone number. Everything lives in a single SQLite file at `~/.devpulse/pulse.db`.
 
 ---
 
 ## What it tracks
 
 - **Commands** — every command you run, deduplicated and ranked
-- **Projects** — time spent per git repository, detected automatically from your working directory
-- **Streaks** — consecutive days with coding activity, GitHub-contribution style
-- **Success rate** — ratio of zero-exit commands to total commands
+- **Projects** — time spent per git repo, detected automatically from your working directory
+- **Streaks** — consecutive days with coding activity
+- **Success rate** — ratio of zero-exit commands to total
 - **Grind time** — total active terminal time per project and overall
 
 ---
 
 ## Install
 
-### Option 1 — one-liner (recommended)
-
 ```bash
-curl -fsSL https://raw.githubusercontent.com/devpulse-cli/devpulse/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/abdulqadirmsingi/pulse-cli/main/scripts/install.sh | bash
 ```
 
-This downloads the right pre-built binary for your OS and architecture (macOS arm64/amd64, Linux arm64/amd64, Windows) and puts it in `/usr/local/bin`.
+The script handles everything: downloads the right binary for your OS and chip, installs it to `~/.local/bin`, adds it to your PATH, and runs `pulse init` to set up the database and shell hook.
 
-### Option 2 — Go install
+When it finishes, it'll show you one command to run:
 
 ```bash
-go install github.com/devpulse-cli/devpulse@latest
+source ~/.zshrc   # or ~/.bashrc if you use bash
 ```
 
-Requires Go 1.21+. The binary ends up in your `$GOPATH/bin`.
+This activates the hook in your **current** terminal. Any new terminal you open after installing will work automatically without this step.
 
-### Option 3 — from source
+### Install from source
 
 ```bash
-git clone https://github.com/devpulse-cli/devpulse
-cd devpulse
+git clone https://github.com/abdulqadirmsingi/pulse-cli
+cd pulse-cli
 make install
-```
-
----
-
-## Setup
-
-After installing, run this once:
-
-```bash
 pulse init
+source ~/.zshrc
 ```
 
-This creates `~/.devpulse/`, initialises the database, and appends a small hook to your `.zshrc` or `.bashrc`. Then reload your shell:
-
-```bash
-source ~/.zshrc   # or ~/.bashrc
-```
-
-From this point forward Pulse records every command in the background. It adds no visible latency — the logging happens in a forked subprocess.
+Requires Go 1.21+.
 
 ---
 
-## Usage
+## Commands
 
-```bash
-# your stats for the last 7 days
-pulse stats
+| Command | What it does |
+|---------|-------------|
+| `pulse stats` | your command count, grind time, streak, top commands + projects |
+| `pulse stats -d 30` | same but for the last 30 days |
+| `pulse today` | hour-by-hour heatmap of today's activity |
+| `pulse projects` | every detected project with time, commands, and success rate |
+| `pulse vibe` | pattern insights — what your data says about how you work |
+| `pulse dash` | live auto-refreshing TUI dashboard (updates every 5s) |
+| `pulse doctor` | check if tracking is set up correctly |
+| `pulse update` | update to the latest version |
+| `pulse reset --force` | clear all command history and start fresh |
+| `pulse uninstall` | remove pulse from your machine |
+| `pulse version` | show the installed version |
 
-# zoom out to the last 30 days
-pulse stats --days 30
+---
 
-# check what version you're running
-pulse version
-```
-
-Example output:
+## Example output
 
 ```
 📊  ur dev pulse  ·  last 7 days
+
 ╭──────────────────────────────────────╮
-│  🔥  streak            9 day streak 🔥  │
-│  ⚡  commands          1,247          │
-│  ⏰  grind time        14h 32m        │
-│  ✅  success rate      94.1%          │
+│  🔥  streak            9 day streak 🔥 │
+│  ⚡  commands          1,247           │
+│  ⏰  grind time        14h 32m         │
+│  ✅  success rate      94.1%           │
 ╰──────────────────────────────────────╯
-╭─────────────────────────────────────────╮
-│  💻  top commands              │
-│                                         │
-│  git           ██████████████  342 runs │
-│  npm           ██████████░░░░  214 runs │
-│  vim           ████████░░░░░░  156 runs │
-│  go            ██████░░░░░░░░  123 runs │
-│  docker        ████░░░░░░░░░░   89 runs │
-╰─────────────────────────────────────────╯
-╭─────────────────────────────────────────────╮
-│  📁  top projects                           │
-│                                             │
-│  myapp             ██████████████  6h 12m   │
-│  api-service       ████████░░░░░░  4h 45m   │
-│  devpulse          █████░░░░░░░░░  2h 58m   │
-╰─────────────────────────────────────────────╯
+
+  💻  top commands
+
+  git             ██████████████  342 runs
+  npm             ██████████░░░░  214 runs
+  vim             ████████░░░░░░  156 runs
+  go              ██████░░░░░░░░  123 runs
+  docker          ████░░░░░░░░░░   89 runs
+
+  📁  top projects
+
+  myapp           ██████████████  6h 12m
+  api-service     ████████░░░░░░  4h 45m
+  pulse-cli       █████░░░░░░░░░  2h 58m
 ```
 
 ---
 
 ## How it works
 
-When you run `pulse init`, it appends a small hook to your shell config:
+`pulse init` appends a small hook to your `.zshrc` or `.bashrc`:
 
-```bash
+```zsh
 _pulse_preexec() {
     _PULSE_CMD_START=$(date +%s)
     _PULSE_CMD="$1"
 }
 _pulse_precmd() {
     local _exit=$?
+    [ -z "$_PULSE_CMD" ] && return
     local _ms=$(( ($(date +%s) - ${_PULSE_CMD_START:-0}) * 1000 ))
-    pulse log --cmd "$_PULSE_CMD" --exit "$_exit" --ms "$_ms" --dir "$PWD" 2>/dev/null &
+    /path/to/pulse log --cmd "$_PULSE_CMD" --exit "$_exit" --ms "$_ms" --dir "$PWD" >/dev/null 2>&1 &|
+    unset _PULSE_CMD _PULSE_CMD_START
 }
+autoload -Uz add-zsh-hook
+add-zsh-hook preexec _pulse_preexec
+add-zsh-hook precmd  _pulse_precmd
 ```
 
-`preexec` fires before each command and captures the command text and start time. `precmd` fires after the command exits and calls `pulse log` in the background (the `&` means it never blocks your prompt). The log command writes one row to SQLite and exits. The whole round trip is under 10ms.
+`preexec` fires before each command and captures the command string and start time. `precmd` fires after it exits and calls `pulse log` in the background — it never blocks your prompt. The full binary path is embedded so it works regardless of what's in your PATH at hook time.
 
-Your data never leaves your machine. The database is a plain SQLite file — you can query it directly with any SQLite client if you want to build your own views.
+Your data never leaves your machine. The SQLite file is yours — query it directly with any SQLite client.
+
+---
+
+## Troubleshooting
+
+**Commands aren't being tracked**
+
+Run `pulse doctor` — it checks your setup end to end and tells you exactly what's wrong.
+
+The most common cause: the terminal was opened before `pulse init` was run. The hook only loads in terminals started after it was written to `.zshrc`. Either open a new terminal or run `source ~/.zshrc`.
+
+**Stats look wrong / showing old data**
+
+`pulse stats` is a snapshot — it shows data at the moment you run it. For a live auto-refreshing view use `pulse dash`.
+
+To wipe old data and start fresh: `pulse reset --force`
 
 ---
 
 ## Data location
 
-| Path | Purpose |
-|------|---------|
+| Path | What's there |
+|------|-------------|
 | `~/.devpulse/pulse.db` | SQLite database — all your command history |
 
-To clear all data: `rm ~/.devpulse/pulse.db` then run `pulse init` again.
-
 ---
 
-## Roadmap
-
-- [ ] `pulse dash` — interactive real-time TUI dashboard
-- [ ] `pulse today` — hour-by-hour activity heatmap for the current day
-- [ ] `pulse vibe` — AI-powered insights and pattern detection (Claude API)
-- [ ] `pulse goals` — set weekly command/time targets with progress tracking
-- [ ] Homebrew tap for one-line install on macOS
-
----
-
-## Contributing
-
-The project is structured to be easy to navigate:
+## Project structure
 
 ```
-cmd/           # CLI commands — one file per subcommand
+cmd/            one file per subcommand
 internal/
-  config/      # path resolution and app settings
-  db/          # all SQLite queries
-  ui/          # shared lipgloss styles and formatters
-scripts/       # install.sh for the curl-pipe installer
+  config/       paths and version
+  db/           all SQLite queries
+  ui/           shared lipgloss styles and formatters
+  tui/          Bubble Tea live dashboard
+  insights/     rule-based pattern analysis
+scripts/        curl-pipe installer
 ```
 
-No file exceeds 200 lines. If a file is getting long, it's a sign the logic should be split into a new package.
-
-```bash
-# run from source without installing
-go run . stats
-
-# build a local binary
-make build
-
-# seed test data to develop against
-make seed
-```
+No file exceeds 200 lines.
 
 ---
 
