@@ -2,7 +2,6 @@ package db
 
 import "time"
 
-// GitEvent is a stored git command with parsed metadata.
 type GitEvent struct {
 	ID         int64
 	CommandID  int64

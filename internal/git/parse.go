@@ -2,7 +2,6 @@ package git
 
 import "strings"
 
-// Event is a parsed git command captured from the shell hook.
 type Event struct {
 	Subcommand string   // "commit", "push", "checkout", etc.
 	Args       []string // args after the subcommand
@@ -14,16 +13,12 @@ type Event struct {
 	Dir        string   // working directory
 }
 
-// Parse returns an Event from a raw command string and working directory.
-// Returns nil if the command is not a git command or has no subcommand.
 func Parse(cmd, dir string) *Event {
 	fields := tokenize(cmd)
-	// must start with "git" and have at least one subcommand
 	if len(fields) < 2 || strings.ToLower(fields[0]) != "git" {
 		return nil
 	}
 
-	// skip any global git flags before the subcommand (e.g. git -C /path commit)
 	subIdx := 1
 	for subIdx < len(fields) && strings.HasPrefix(fields[subIdx], "-") {
 		subIdx++
@@ -41,7 +36,6 @@ func Parse(cmd, dir string) *Event {
 
 	e.IsForce = hasFlag(e.Args, "--force", "-f")
 	e.Message = stripQuotes(flagValue(e.Args, "-m", "--message"))
-	// remote and push target only make sense for network commands
 	switch e.Subcommand {
 	case "push", "pull", "fetch", "clone":
 		positionals := allPositionals(e.Args)
@@ -55,7 +49,6 @@ func Parse(cmd, dir string) *Event {
 	return e
 }
 
-// IsGit returns true if cmd starts with "git".
 func IsGit(cmd string) bool {
 	f := strings.Fields(cmd)
 	return len(f) > 0 && strings.ToLower(f[0]) == "git"
@@ -67,7 +60,6 @@ func hasFlag(args []string, flags ...string) bool {
 		set[f] = true
 	}
 	for _, a := range args {
-		// handle --force-with-lease as a force variant
 		if set[a] || a == "--force-with-lease" {
 			return true
 		}
@@ -75,7 +67,6 @@ func hasFlag(args []string, flags ...string) bool {
 	return false
 }
 
-// firstPositional returns the first arg that is not a flag.
 func firstPositional(args []string) string {
 	for _, a := range args {
 		if !strings.HasPrefix(a, "-") {
@@ -85,7 +76,6 @@ func firstPositional(args []string) string {
 	return ""
 }
 
-// allPositionals returns every arg that is not a flag.
 func allPositionals(args []string) []string {
 	var out []string
 	for _, a := range args {
@@ -96,12 +86,6 @@ func allPositionals(args []string) []string {
 	return out
 }
 
-// tokenize splits a shell command string into tokens, respecting single and
-// double quoted strings so "feat: add login" stays as one token.
-//
-// 🧠 Go Lesson #56: strings.Fields splits on all whitespace regardless of
-// quotes. For shell command parsing you need a state machine that tracks
-// whether you're inside a quoted section before deciding to split.
 func tokenize(s string) []string {
 	var tokens []string
 	var cur strings.Builder
@@ -129,7 +113,6 @@ func tokenize(s string) []string {
 	return tokens
 }
 
-// stripQuotes removes a single layer of surrounding single or double quotes.
 func stripQuotes(s string) string {
 	if len(s) >= 2 {
 		if (s[0] == '\'' && s[len(s)-1] == '\'') || (s[0] == '"' && s[len(s)-1] == '"') {
@@ -139,20 +122,17 @@ func stripQuotes(s string) string {
 	return s
 }
 
-// flagValue returns the value of a named flag, e.g. -m "message" or --message=foo.
 func flagValue(args []string, names ...string) string {
 	nameSet := make(map[string]bool, len(names))
 	for _, n := range names {
 		nameSet[n] = true
 	}
 	for i, a := range args {
-		// --message=value form
 		for _, n := range names {
 			if strings.HasPrefix(a, n+"=") {
 				return strings.TrimPrefix(a, n+"=")
 			}
 		}
-		// -m value form
 		if nameSet[a] && i+1 < len(args) {
 			return args[i+1]
 		}
