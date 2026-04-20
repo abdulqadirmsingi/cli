@@ -18,13 +18,18 @@ func (r *ForceMainRule) Evaluate(e *git.Event) *Violation {
 	if e.Subcommand != "push" || !e.IsForce {
 		return nil
 	}
-	if !mainBranches[e.Branch] {
+	// block if the explicit push target is main, OR if pushing from main with no target
+	target := e.PushTarget
+	if target == "" {
+		target = e.Branch
+	}
+	if !mainBranches[target] {
 		return nil
 	}
 	return &Violation{
 		Severity: SeverityBlock,
 		Rule:     r.Name(),
-		Message:  "force push to " + e.Branch + " — this rewrites shared history",
+		Message:  "force push to " + target + " — this rewrites shared history",
 		Fix:      "use --force-with-lease if you really must, or open a PR instead",
 	}
 }
