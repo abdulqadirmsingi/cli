@@ -62,11 +62,25 @@ func gitHooksInstall() error {
 		"post-commit": postCommitHook(self),
 		"pre-push":    prePushHook(self),
 	}
+	skipped := 0
 	for name, content := range hooks {
 		path := filepath.Join(dir, name)
+		if existing, err := os.ReadFile(path); err == nil {
+			if strings.Contains(string(existing), "pulse") {
+				// already our hook — overwrite to pick up new binary path
+			} else if len(strings.TrimSpace(string(existing))) > 0 {
+				fmt.Printf("  %s  %s\n", ui.Muted.Render("~"), ui.Muted.Render("skipping "+name+" — existing custom hook detected (not from Pulse)"))
+				skipped++
+				continue
+			}
+		}
 		if err := os.WriteFile(path, []byte(content), 0755); err != nil {
 			return fmt.Errorf("writing %s hook: %w", name, err)
 		}
+	}
+	if skipped > 0 {
+		fmt.Println()
+		fmt.Printf("  %s  %s\n", ui.Muted.Render("!"), ui.Muted.Render(fmt.Sprintf("%d hook(s) skipped to protect your custom hooks — delete them manually to let Pulse install its own", skipped)))
 	}
 
 	// set global core.hooksPath — works for every repo on the machine
