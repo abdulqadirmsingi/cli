@@ -82,6 +82,31 @@ Requires Go 1.21+.
 | `pulse git-guard off` | disable the guard |
 | `pulse git-guard status` | check if the guard is active |
 
+### Custom commands
+
+Make your own `pulse` shortcuts for anything you run often:
+
+| Command | What it does |
+|---------|-------------|
+| `pulse cmd add <name> "<command>"` | create a new shortcut |
+| `pulse cmd` or `pulse c` | list all your shortcuts |
+| `pulse cmd rm <name>` | remove a shortcut |
+| `pulse <name>` | run it |
+
+**Quotes are optional** — both forms work:
+```bash
+pulse cmd add simulator "open -a Simulator"
+pulse cmd add simulator open -a Simulator
+```
+
+Any extra args you pass get forwarded to the underlying command:
+```bash
+pulse cmd add open-project "open -a Cursor"
+pulse open-project .           # runs: open -a Cursor .
+```
+
+Shortcuts can't shadow built-in pulse commands (`stats`, `history`, `reset`, etc.). Custom command names are lowercase letters, digits, and hyphens only.
+
 ### Maintenance
 
 | Command | What it does |

@@ -18,7 +18,7 @@ import (
 var validCmdName = regexp.MustCompile(`^[a-z][a-z0-9-]{0,30}$`)
 
 var builtinNames = map[string]bool{
-	"cmd": true, "dash": true, "doctor": true, "fav": true, "f": true,
+	"c": true, "cmd": true, "dash": true, "doctor": true, "fav": true, "f": true,
 	"history": true, "hooks": true, "init": true, "log": true,
 	"projects": true, "reset": true, "search": true, "s": true,
 	"stats": true, "today": true, "uninstall": true, "update": true,
@@ -27,17 +27,32 @@ var builtinNames = map[string]bool{
 }
 
 var cmdCmd = &cobra.Command{
-	Use:   "cmd",
-	Short: "create and run your own pulse shortcuts ⚡",
-	Long:  "Define shortcuts for any shell command. `pulse cmd add simulator \"open -a Simulator\"` lets you type `pulse simulator` instead.",
-	RunE:  runCmdList,
+	Use:     "cmd",
+	Aliases: []string{"c"},
+	Short:   "create and run your own pulse shortcuts ⚡",
+	Long: `Create your own pulse shortcuts for any shell command.
+
+Examples:
+  pulse cmd add simulator "open -a Simulator"
+  pulse cmd add ios "cd ~/Projects/ios && xed ."
+  pulse cmd add serve "python3 -m http.server 8080"
+
+Both forms work when adding — quoted or unquoted:
+  pulse cmd add simulator "open -a Simulator"
+  pulse cmd add simulator open -a Simulator
+
+Run your shortcuts:
+  pulse simulator
+  pulse c          list all custom commands
+  pulse c rm <name>`,
+	RunE: runCmdList,
 }
 
 var cmdAddCmd = &cobra.Command{
-	Use:   `add <name> "<command>"`,
-	Short: "create a custom pulse command",
-	Args:  cobra.ExactArgs(2),
-	RunE:  runCmdAdd,
+	Use:                "add <name> <command...>",
+	Short:              "create a custom pulse command",
+	DisableFlagParsing: true,
+	RunE:               runCmdAdd,
 }
 
 var cmdRmCmd = &cobra.Command{
@@ -121,6 +136,29 @@ func shellescape(s string) string {
 	return s
 }
 
+// buildCommandString reconstructs the shell command from cobra args.
+// Handles both:
+//   - pulse cmd add simulator "open -a Simulator"   → args = ["simulator", "open -a Simulator"]
+//   - pulse cmd add simulator open -a Simulator      → args = ["simulator", "open", "-a", "Simulator"]
+//   - pulse cmd add simulator open -a "My App"       → args = ["simulator", "open", "-a", "My App"]
+func buildCommandString(args []string) string {
+	if len(args) == 1 {
+		// single token — the whole command was quoted by the shell, use as-is
+		return args[0]
+	}
+	// multiple tokens — re-quote any that contain spaces so the stored
+	// command string is safe to pass to sh -c later
+	parts := make([]string, len(args))
+	for i, a := range args {
+		if strings.ContainsAny(a, " \t") {
+			parts[i] = "'" + strings.ReplaceAll(a, "'", `'\''`) + "'"
+		} else {
+			parts[i] = a
+		}
+	}
+	return strings.Join(parts, " ")
+}
+
 func openCmdDB() (*db.DB, error) {
 	cfg, err := config.Load()
 	if err != nil {
@@ -181,8 +219,31 @@ func runCmdList(_ *cobra.Command, _ []string) error {
 }
 
 func runCmdAdd(_ *cobra.Command, args []string) error {
+	// DisableFlagParsing means --help arrives as a normal arg
+	if len(args) == 1 && (args[0] == "--help" || args[0] == "-h") {
+		fmt.Println()
+		fmt.Println(ui.Title.Render("⚡  pulse cmd add"))
+		fmt.Println()
+		cyan := lipgloss.NewStyle().Foreground(ui.ColorCyan)
+		fmt.Println("  " + ui.Muted.Render("usage:"))
+		fmt.Println("  " + cyan.Render(`pulse cmd add <name> "<command>"`))
+		fmt.Println("  " + cyan.Render(`pulse c add <name> <command words...>`))
+		fmt.Println()
+		fmt.Println("  " + ui.Muted.Render("both of these do the same thing:"))
+		fmt.Println(`  ` + cyan.Render(`pulse cmd add simulator "open -a Simulator"`))
+		fmt.Println(`  ` + cyan.Render(`pulse cmd add simulator open -a Simulator`))
+		fmt.Println()
+		fmt.Println("  " + ui.Muted.Render("name rules: lowercase letters, digits, hyphens — no spaces"))
+		fmt.Println("  " + ui.Muted.Render("name can't shadow a built-in pulse command"))
+		fmt.Println()
+		return nil
+	}
+	if len(args) < 2 {
+		return fmt.Errorf("usage: pulse cmd add <name> \"<command>\"  (or: pulse cmd add <name> command words...)")
+	}
+
 	name := strings.ToLower(strings.TrimSpace(args[0]))
-	command := strings.TrimSpace(args[1])
+	command := strings.TrimSpace(buildCommandString(args[1:]))
 
 	if !validCmdName.MatchString(name) {
 		if strings.ContainsRune(name, ' ') {
