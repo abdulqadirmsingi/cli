@@ -4,7 +4,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/devpulse-cli/devpulse/internal/git"
+	"github.com/abdulqadirmsingi/pulse-cli/internal/git"
 )
 
 var mainBranches = map[string]bool{"main": true, "master": true}

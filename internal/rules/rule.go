@@ -1,6 +1,6 @@
 package rules
 
-import "github.com/devpulse-cli/devpulse/internal/git"
+import "github.com/abdulqadirmsingi/pulse-cli/internal/git"
 
 type Severity int
 
