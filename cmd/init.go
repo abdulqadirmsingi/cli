@@ -141,14 +141,22 @@ end
 	case "zsh":
 		content = fmt.Sprintf(`
 # ── Pulse shell hook ────────────────────────────────────
+_pulse_now_ms() {
+    if command -v perl >/dev/null 2>&1; then
+        perl -MTime::HiRes=time -e 'printf "%%.0f\n", time() * 1000'
+    else
+        echo $(( $(date +%%s) * 1000 ))
+    fi
+}
 _pulse_preexec() {
-    _PULSE_CMD_START=$(date +%%s)
+    _PULSE_CMD_START=$(_pulse_now_ms)
     _PULSE_CMD="$1"
 }
 _pulse_precmd() {
     local _exit=$?
     [ -z "$_PULSE_CMD" ] && return
-    local _ms=$(( ($(date +%%s) - ${_PULSE_CMD_START:-0}) * 1000 ))
+    local _ms=$(( $(_pulse_now_ms) - ${_PULSE_CMD_START:-0} ))
+    [ "$_ms" -lt 0 ] && _ms=0
     case "$_PULSE_CMD" in
         git\ *)
             %s log --cmd "$_PULSE_CMD" --exit "$_exit" --ms "$_ms" --dir "$PWD" 2>&1
@@ -169,14 +177,27 @@ add-zsh-hook precmd  _pulse_precmd
 	default: // bash
 		content = fmt.Sprintf(`
 # ── Pulse shell hook ────────────────────────────────────
+_pulse_now_ms() {
+    if [ -n "${EPOCHREALTIME:-}" ]; then
+        local _sec="${EPOCHREALTIME%%.*}"
+        local _frac="${EPOCHREALTIME#*.}"
+        _frac="${_frac:0:3}"
+        printf '%%s\n' "$((10#$_sec * 1000 + 10#${_frac:-0}))"
+    elif command -v perl >/dev/null 2>&1; then
+        perl -MTime::HiRes=time -e 'printf "%%.0f\n", time() * 1000'
+    else
+        echo $(( $(date +%%s) * 1000 ))
+    fi
+}
 _pulse_preexec() {
-    _PULSE_CMD_START=$(date +%%s)
+    _PULSE_CMD_START=$(_pulse_now_ms)
     _PULSE_CMD="$BASH_COMMAND"
 }
 _pulse_precmd() {
     local _exit=$?
     [ -z "$_PULSE_CMD" ] && return
-    local _ms=$(( ($(date +%%s) - ${_PULSE_CMD_START:-0}) * 1000 ))
+    local _ms=$(( $(_pulse_now_ms) - ${_PULSE_CMD_START:-0} ))
+    [ "$_ms" -lt 0 ] && _ms=0
     case "$_PULSE_CMD" in
         git\ *)
             %s log --cmd "$_PULSE_CMD" --exit "$_exit" --ms "$_ms" --dir "$PWD" 2>&1
