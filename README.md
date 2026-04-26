@@ -73,6 +73,16 @@ Requires Go 1.21+.
 | `pulse fav` / `pulse f add "<cmd>"` | save commands you keep coming back to |
 | `pulse vibe` | pattern insights — what your data says about how you work |
 | `pulse dash` | live auto-refreshing TUI dashboard (updates every 5s) |
+| `pulse dash --refresh 2` | dashboard with a faster refresh interval |
+
+`pulse ask` is not AI yet. It is a private local Q&A layer that understands common questions and similar wording:
+
+```bash
+pulse ask "what did I work on today?"
+pulse ask "which project took most of my time?"
+pulse ask "what commands do I repeat a lot?"
+pulse ask "how was my week?"
+```
 
 ### Git discipline
 
