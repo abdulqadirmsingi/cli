@@ -41,11 +41,11 @@ func runToday(_ *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-	topCmds, err := database.GetTopCommands(1, 5)
+	topCmds, err := database.GetTodayTopCommands(5)
 	if err != nil {
 		return err
 	}
-	topProjects, err := database.GetTopProjects(1, 4)
+	topProjects, err := database.GetTodayTopProjects(4)
 	if err != nil {
 		return err
 	}

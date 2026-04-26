@@ -36,7 +36,7 @@ func (db *DB) InsertCommandGetID(command, dir, project string, exitCode int, dur
 }
 
 func (db *DB) GetStats(days int) (*Stats, error) {
-	since := time.Now().UTC().AddDate(0, 0, -days).Format("2006-01-02")
+	since := localWindowStart(days)
 	var s Stats
 	err := db.conn.QueryRow(`
 		SELECT
@@ -56,7 +56,38 @@ func (db *DB) GetStats(days int) (*Stats, error) {
 }
 
 func (db *DB) GetTopCommands(days, limit int) ([]TopEntry, error) {
-	since := time.Now().UTC().AddDate(0, 0, -days).Format("2006-01-02")
+	since := localWindowStart(days)
+	return db.getTopCommandsSince(since, limit)
+}
+
+func (db *DB) GetTodayTopCommands(limit int) ([]TopEntry, error) {
+	start, end := localDayRange(nowFunc())
+	rows, err := db.conn.Query(`
+		SELECT
+			SUBSTR(TRIM(command), 1, INSTR(TRIM(command) || ' ', ' ') - 1) AS base_cmd,
+			COUNT(*) AS cnt
+		FROM commands
+		WHERE created_at >= ? AND created_at < ? AND TRIM(command) != '' AND noise = 0
+		GROUP BY base_cmd
+		HAVING base_cmd != ''
+		ORDER BY cnt DESC
+		LIMIT ?`, start, end, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var entries []TopEntry
+	for rows.Next() {
+		var e TopEntry
+		if err := rows.Scan(&e.Name, &e.Count); err != nil {
+			continue
+		}
+		entries = append(entries, e)
+	}
+	return entries, rows.Err()
+}
+
+func (db *DB) getTopCommandsSince(since string, limit int) ([]TopEntry, error) {
 	rows, err := db.conn.Query(`
 		SELECT
 			SUBSTR(TRIM(command), 1, INSTR(TRIM(command) || ' ', ' ') - 1) AS base_cmd,
@@ -83,11 +114,39 @@ func (db *DB) GetTopCommands(days, limit int) ([]TopEntry, error) {
 }
 
 func (db *DB) GetTopProjects(days, limit int) ([]TopEntry, error) {
-	since := time.Now().UTC().AddDate(0, 0, -days).Format("2006-01-02")
+	since := localWindowStart(days)
+	return db.getTopProjectsSince(since, limit)
+}
+
+func (db *DB) GetTodayTopProjects(limit int) ([]TopEntry, error) {
+	start, end := localDayRange(nowFunc())
 	rows, err := db.conn.Query(`
 		SELECT project, COUNT(*) AS cnt, COALESCE(SUM(duration_ms), 0) AS total_ms
 		FROM commands
-		WHERE created_at >= ? AND project != ''
+		WHERE created_at >= ? AND created_at < ? AND project != '' AND noise = 0
+		GROUP BY project
+		ORDER BY total_ms DESC
+		LIMIT ?`, start, end, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var entries []TopEntry
+	for rows.Next() {
+		var e TopEntry
+		if err := rows.Scan(&e.Name, &e.Count, &e.MS); err != nil {
+			continue
+		}
+		entries = append(entries, e)
+	}
+	return entries, rows.Err()
+}
+
+func (db *DB) getTopProjectsSince(since string, limit int) ([]TopEntry, error) {
+	rows, err := db.conn.Query(`
+		SELECT project, COUNT(*) AS cnt, COALESCE(SUM(duration_ms), 0) AS total_ms
+		FROM commands
+		WHERE created_at >= ? AND project != '' AND noise = 0
 		GROUP BY project
 		ORDER BY total_ms DESC
 		LIMIT ?`, since, limit)
@@ -118,7 +177,7 @@ func (db *DB) calcStreak() int {
 	defer rows.Close()
 
 	streak := 0
-	expected := time.Now().Format("2006-01-02") // local date
+	expected := nowFunc().Format("2006-01-02") // local date
 	for rows.Next() {
 		var day string
 		if err := rows.Scan(&day); err != nil {
@@ -128,7 +187,7 @@ func (db *DB) calcStreak() int {
 			break
 		}
 		streak++
-		t, _ := time.Parse("2006-01-02", day)
+		t, _ := time.ParseInLocation("2006-01-02", day, time.Local)
 		expected = t.AddDate(0, 0, -1).Format("2006-01-02")
 	}
 	return streak
@@ -146,11 +205,12 @@ type CommandRow struct {
 // GetTodayCommands returns every command logged today in chronological order.
 // Noise commands are included but flagged so the caller can filter or style them.
 func (db *DB) GetTodayCommands() ([]CommandRow, error) {
+	start, end := localDayRange(nowFunc())
 	rows, err := db.conn.Query(`
 		SELECT command, exit_code, duration_ms, created_at, noise
 		FROM commands
-		WHERE DATE(created_at, 'localtime') = DATE('now', 'localtime') AND TRIM(command) != ''
-		ORDER BY created_at ASC`)
+		WHERE created_at >= ? AND created_at < ? AND TRIM(command) != ''
+		ORDER BY created_at ASC`, start, end)
 	if err != nil {
 		return nil, err
 	}

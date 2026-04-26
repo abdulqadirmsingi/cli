@@ -2,7 +2,6 @@ package db
 
 import (
 	"fmt"
-	"time"
 )
 
 // HourlyBucket holds command count for one hour of the day.
@@ -26,12 +25,16 @@ type ProjectSummary struct {
 }
 
 func (db *DB) GetHourlyStats(date string) ([]HourlyBucket, error) {
+	start, end, err := localDateRange(date)
+	if err != nil {
+		return nil, fmt.Errorf("parsing date %q: %w", date, err)
+	}
 	rows, err := db.conn.Query(`
-		SELECT CAST(strftime('%H', created_at) AS INTEGER) AS hr, COUNT(*) AS cnt
+		SELECT CAST(strftime('%H', created_at, 'localtime') AS INTEGER) AS hr, COUNT(*) AS cnt
 		FROM commands
-		WHERE DATE(created_at) = ?
+		WHERE created_at >= ? AND created_at < ?
 		GROUP BY hr
-		ORDER BY hr`, date)
+		ORDER BY hr`, start, end)
 	if err != nil {
 		return nil, err
 	}
@@ -50,9 +53,9 @@ func (db *DB) GetHourlyStats(date string) ([]HourlyBucket, error) {
 
 // GetDailyActivity returns command count per day for the last N days, oldest first.
 func (db *DB) GetDailyActivity(days int) ([]DailyBucket, error) {
-	since := time.Now().AddDate(0, 0, -days).Format("2006-01-02")
+	since := localWindowStart(days)
 	rows, err := db.conn.Query(`
-		SELECT DATE(created_at) AS day, COUNT(*) AS cnt
+		SELECT DATE(created_at, 'localtime') AS day, COUNT(*) AS cnt
 		FROM commands
 		WHERE created_at >= ?
 		GROUP BY day
@@ -75,7 +78,7 @@ func (db *DB) GetDailyActivity(days int) ([]DailyBucket, error) {
 
 // GetTodayStats returns a Stats summary scoped to today only.
 func (db *DB) GetTodayStats() (*Stats, error) {
-	today := time.Now().Format("2006-01-02")
+	start, end := localDayRange(nowFunc())
 	var s Stats
 	err := db.conn.QueryRow(`
 		SELECT
@@ -85,23 +88,25 @@ func (db *DB) GetTodayStats() (*Stats, error) {
 			COALESCE(AVG(CASE WHEN noise = 0 AND exit_code = 0 THEN 1.0
 			               WHEN noise = 0 THEN 0.0 END) * 100, 0)   AS success_rate
 		FROM commands
-		WHERE DATE(created_at) = ?`, today).
+		WHERE created_at >= ? AND created_at < ?`, start, end).
 		Scan(&s.TotalCommands, &s.NoiseCommands, &s.TotalTimeMS, &s.SuccessRate)
 	return &s, err
 }
 
 // GetProjectList returns all projects with full stats for the last N days.
 func (db *DB) GetProjectList(days int) ([]ProjectSummary, error) {
-	since := time.Now().AddDate(0, 0, -days).Format("2006-01-02")
+	since := localWindowStart(days)
 	rows, err := db.conn.Query(`
 		SELECT
 			project,
-			COALESCE(SUM(duration_ms), 0) AS total_ms,
-			COUNT(*) AS total_cmds,
-			COALESCE(AVG(CASE WHEN exit_code = 0 THEN 1.0 ELSE 0.0 END) * 100, 0) AS success_rate
+			COALESCE(SUM(CASE WHEN noise = 0 THEN duration_ms ELSE 0 END), 0) AS total_ms,
+			COALESCE(SUM(CASE WHEN noise = 0 THEN 1 ELSE 0 END), 0) AS total_cmds,
+			COALESCE(AVG(CASE WHEN noise = 0 AND exit_code = 0 THEN 1.0
+			                  WHEN noise = 0 THEN 0.0 END) * 100, 0) AS success_rate
 		FROM commands
 		WHERE created_at >= ? AND project != ''
 		GROUP BY project
+		HAVING total_cmds > 0
 		ORDER BY total_ms DESC`, since)
 	if err != nil {
 		return nil, fmt.Errorf("querying project list: %w", err)
