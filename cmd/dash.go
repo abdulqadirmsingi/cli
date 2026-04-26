@@ -2,15 +2,17 @@ package cmd
 
 import (
 	"fmt"
+	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/abdulqadirmsingi/pulse-cli/internal/config"
 	"github.com/abdulqadirmsingi/pulse-cli/internal/db"
 	"github.com/abdulqadirmsingi/pulse-cli/internal/tui"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 )
 
 var dashDays int
+var dashRefresh int
 
 var dashCmd = &cobra.Command{
 	Use:   "dash",
@@ -22,6 +24,7 @@ var dashCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(dashCmd)
 	dashCmd.Flags().IntVarP(&dashDays, "days", "d", 7, "days to include in stats")
+	dashCmd.Flags().IntVar(&dashRefresh, "refresh", 5, "dashboard refresh interval in seconds")
 }
 
 func runDash(_ *cobra.Command, _ []string) error {
@@ -35,7 +38,7 @@ func runDash(_ *cobra.Command, _ []string) error {
 	}
 	defer database.Close()
 
-	p := tea.NewProgram(tui.New(database, dashDays), tea.WithAltScreen())
+	p := tea.NewProgram(tui.New(database, dashDays, time.Duration(dashRefresh)*time.Second), tea.WithAltScreen())
 	_, err = p.Run()
 	return err
 }

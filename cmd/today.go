@@ -5,11 +5,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/lipgloss"
 	"github.com/abdulqadirmsingi/pulse-cli/internal/config"
 	"github.com/abdulqadirmsingi/pulse-cli/internal/db"
 	"github.com/abdulqadirmsingi/pulse-cli/internal/tui"
 	"github.com/abdulqadirmsingi/pulse-cli/internal/ui"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 )
 
@@ -41,11 +41,11 @@ func runToday(_ *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-	topCmds, err := database.GetTopCommands(1, 5)
+	topCmds, err := database.GetTodayTopCommands(5)
 	if err != nil {
 		return err
 	}
-	topProjects, err := database.GetTopProjects(1, 4)
+	topProjects, err := database.GetTodayTopProjects(4)
 	if err != nil {
 		return err
 	}
