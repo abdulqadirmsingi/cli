@@ -3,8 +3,8 @@ package tui
 import (
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/abdulqadirmsingi/pulse-cli/internal/db"
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 // tab is a named type so we get compile-time safety: you can't accidentally
@@ -46,13 +46,17 @@ type Model struct {
 	height    int
 	data      dataMsg
 	days      int
+	refresh   time.Duration
 	ready     bool
 	database  *db.DB
 }
 
 // New builds a fresh Model.  Pass in the open DB and the day window.
-func New(database *db.DB, days int) Model {
-	return Model{database: database, days: days}
+func New(database *db.DB, days int, refresh time.Duration) Model {
+	if refresh <= 0 {
+		refresh = 5 * time.Second
+	}
+	return Model{database: database, days: days, refresh: refresh}
 }
 
 // Init returns the first batch of Cmds to run immediately on startup.
@@ -61,7 +65,7 @@ func New(database *db.DB, days int) Model {
 // tea.Batch runs multiple Cmds concurrently (like Promise.all).
 // The results arrive as messages in Update — no callbacks, no channels.
 func (m Model) Init() tea.Cmd {
-	return tea.Batch(fetchData(m.database, m.days), scheduleTick())
+	return tea.Batch(fetchData(m.database, m.days), scheduleTick(m.refresh))
 }
 
 // Update is called for every incoming message. It returns a new Model and
@@ -98,7 +102,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tickMsg:
 		// Auto-refresh: reload data then schedule the next tick.
-		return m, tea.Batch(fetchData(m.database, m.days), scheduleTick())
+		return m, tea.Batch(fetchData(m.database, m.days), scheduleTick(m.refresh))
 
 	case dataMsg:
 		m.data = msg
@@ -122,6 +126,6 @@ func fetchData(database *db.DB, days int) tea.Cmd {
 	}
 }
 
-func scheduleTick() tea.Cmd {
-	return tea.Tick(5*time.Second, func(t time.Time) tea.Msg { return tickMsg(t) })
+func scheduleTick(refresh time.Duration) tea.Cmd {
+	return tea.Tick(refresh, func(t time.Time) tea.Msg { return tickMsg(t) })
 }

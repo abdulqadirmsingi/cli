@@ -68,8 +68,21 @@ Requires Go 1.21+.
 | `pulse history --no-noise` | same, hiding ls / cd / clear |
 | `pulse today` | hour-by-hour heatmap of today's activity |
 | `pulse projects` | every detected project with time, commands, and success rate |
+| `pulse ask "what did I work on today?"` | friendly local Q&A about your own activity — no AI/cloud needed |
+| `pulse search git checkout` / `pulse s git` | search your command history |
+| `pulse fav` / `pulse f add "<cmd>"` | save commands you keep coming back to |
 | `pulse vibe` | pattern insights — what your data says about how you work |
 | `pulse dash` | live auto-refreshing TUI dashboard (updates every 5s) |
+| `pulse dash --refresh 2` | dashboard with a faster refresh interval |
+
+`pulse ask` is not AI yet. It is a private local Q&A layer that understands common questions and similar wording:
+
+```bash
+pulse ask "what did I work on today?"
+pulse ask "which project took most of my time?"
+pulse ask "what commands do I repeat a lot?"
+pulse ask "how was my week?"
+```
 
 ### Git discipline
 
@@ -112,6 +125,7 @@ Shortcuts can't shadow built-in pulse commands (`stats`, `history`, `reset`, etc
 | Command | What it does |
 |---------|-------------|
 | `pulse doctor` | check if tracking is set up correctly |
+| `pulse backup` / `pulse export` | copy your local SQLite database to a portable backup file |
 | `pulse update` | update to the latest version |
 | `pulse reset --force` | clear all command history and start fresh |
 | `pulse uninstall` | remove Pulse from your machine |

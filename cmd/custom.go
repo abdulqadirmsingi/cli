@@ -8,17 +8,17 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
 	"github.com/abdulqadirmsingi/pulse-cli/internal/config"
 	"github.com/abdulqadirmsingi/pulse-cli/internal/db"
 	"github.com/abdulqadirmsingi/pulse-cli/internal/ui"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 )
 
 var validCmdName = regexp.MustCompile(`^[a-z][a-z0-9-]{0,30}$`)
 
 var builtinNames = map[string]bool{
-	"c": true, "cmd": true, "dash": true, "doctor": true, "fav": true, "f": true,
+	"ask": true, "backup": true, "export": true, "c": true, "cmd": true, "dash": true, "doctor": true, "fav": true, "f": true,
 	"history": true, "hooks": true, "init": true, "log": true,
 	"projects": true, "reset": true, "search": true, "s": true,
 	"stats": true, "today": true, "uninstall": true, "update": true,
@@ -199,9 +199,9 @@ func runCmdList(_ *cobra.Command, _ []string) error {
 	fmt.Println(ui.Title.Render(fmt.Sprintf("⚡  custom commands  ·  %d", len(commands))))
 	fmt.Println()
 
-	nameStyle  := lipgloss.NewStyle().Foreground(ui.ColorCyan)
+	nameStyle := lipgloss.NewStyle().Foreground(ui.ColorCyan)
 	arrowStyle := lipgloss.NewStyle().Foreground(ui.ColorGray)
-	cmdStyle   := lipgloss.NewStyle().Foreground(ui.ColorGray)
+	cmdStyle := lipgloss.NewStyle().Foreground(ui.ColorGray)
 
 	for _, c := range commands {
 		fmt.Printf("  %s  %s  %s\n",
